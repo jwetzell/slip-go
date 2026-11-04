@@ -52,3 +52,45 @@ func TestGoodReader(t *testing.T) {
 		})
 	}
 }
+
+func TestBadReader(t *testing.T) {
+	testCases := []struct {
+		name      string
+		input     []byte
+		buffer    []byte
+		errString string
+	}{
+		{
+			name:      "not enough bytes",
+			input:     []byte{0xc0, 'h', 'i', 0xc0},
+			buffer:    make([]byte, 1),
+			errString: "short buffer",
+		},
+		{
+			name:      "EOF",
+			input:     []byte{0xc0, 'h', 'i'},
+			buffer:    make([]byte, 2),
+			errString: "EOF",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := slip.NewReader(bytes.NewReader(tc.input))
+			messages := [][]byte{}
+			didError := false
+			for {
+				n, err := r.Read(tc.buffer)
+				require.Equal(t, 0, n)
+				if err != nil {
+					require.Contains(t, err.Error(), tc.errString)
+					didError = true
+					break
+				}
+				messages = append(messages, tc.buffer[:n])
+			}
+			require.Empty(t, messages)
+			require.True(t, didError)
+		})
+	}
+}
