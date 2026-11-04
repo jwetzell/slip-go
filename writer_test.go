@@ -24,6 +24,16 @@ func TestGoodWriter(t *testing.T) {
 			input:    []byte{'b', 0xc0, 'e'},
 			expected: []byte{0xc0, 'b', 0xdb, 0xdc, 'e', 0xc0},
 		},
+		{
+			name:     "end escape",
+			input:    []byte{0xc0},
+			expected: []byte{0xc0, 0xdb, 0xdc, 0xc0},
+		},
+		{
+			name:     "escape escape",
+			input:    []byte{0xdb},
+			expected: []byte{0xc0, 0xdb, 0xdd, 0xc0},
+		},
 	}
 
 	for _, tc := range testCases {

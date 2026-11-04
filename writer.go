@@ -1,9 +1,14 @@
 package slip
 
-import "io"
+import (
+	"bytes"
+	"io"
+	"sync"
+)
 
 type Writer struct {
-	w io.Writer
+	mu sync.Mutex
+	w  io.Writer
 }
 
 func NewWriter(w io.Writer) *Writer {
@@ -11,19 +16,23 @@ func NewWriter(w io.Writer) *Writer {
 }
 
 func (w *Writer) Write(p []byte) (n int, err error) {
-	var encodedBytes = []byte{end}
+	var encodedBytes = bytes.Buffer{}
+
+	encodedBytes.WriteByte(end)
 
 	for _, byteToEncode := range p {
 		switch byteToEncode {
 		case end:
-			encodedBytes = append(encodedBytes, esc, esc_end)
+			encodedBytes.Write([]byte{esc, esc_end})
 		case esc:
-			encodedBytes = append(encodedBytes, esc, esc_esc)
+			encodedBytes.Write([]byte{esc, esc_esc})
 		default:
-			encodedBytes = append(encodedBytes, byteToEncode)
+			encodedBytes.WriteByte(byteToEncode)
 		}
 	}
 
-	encodedBytes = append(encodedBytes, end)
-	return w.w.Write(encodedBytes)
+	encodedBytes.WriteByte(end)
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.w.Write(encodedBytes.Bytes())
 }
